@@ -1,0 +1,160 @@
+services:
+  zookeeper:
+    build: ./zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    build: ./kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    healthcheck:
+      test: /usr/bin/kafka-topics --bootstrap-server=localhost:9092 --list
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  producer:
+    build: ./producer
+    container_name: producer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC: demo-topic
+
+  consumer:
+    build: ./consumer
+    container_name: consumer
+    ports:
+      - "8081:8080"
+    depends_on:
+       kafka:
+         condition: service_healthy
+    environment:
+      SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC: demo-topic
+      SPRING_KAFKA_CONSUMER_GROUP_ID: my-group
+
+  # Added Elasticsearch service
+  elasticsearch:
+    build: ./elasticsearch # Use the Dockerfile in the elasticsearch directory
+    container_name: elasticsearch
+    ports:
+      - "9200:9200" # HTTP port
+      - "9300:9300" # Transport port
+    environment:
+      discovery.type: single-node # Run as a single node
+      xpack.security.enabled: "false" # Disable security (for development only!)
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m" # Set heap size
+    # Optional: Add a volume for data persistence
+    # volumes:
+    #   - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+# Optional: Define the volume for data persistence
+# volumes:
+#   elasticsearch_data:
+#     driver: local
+
+  # Add Kafka Connect service
+  kafka-connect:
+    build: ./kafka-connect
+    container_name: kafka-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      schema-registry: # Added dependency on schema-registry
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      # Keep essential Kafka Connect environment variables
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083 # Port for the REST API (often needed, even in standalone)
+      CONNECT_GROUP_ID: "kafka-connect-group" # Still relevant for standalone mode offsets
+      CONNECT_CONFIG_STORAGE_TOPIC: "kafka-connect-configs" # Topic for config storage (used by standalone)
+      CONNECT_OFFSET_STORAGE_TOPIC: "kafka-connect-offsets" # Topic for offset storage (used by standalone)
+      CONNECT_STATUS_STORAGE_TOPIC: "kafka-connect-status" # Topic for status storage (used by standalone)
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1 # Replication factor for internal topics
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1 # Replication factor for internal topics
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1 # Replication factor for internal topics
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect" # How the REST API advertises itself
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components" # Path to connector
+      # Add back the required default worker-level converters
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter" # Add this back
+      CONNECT_VALUE_CONVERTER: "io.confluent.connect.protobuf.ProtobufConverter" # Keep or set a suitable default value converter
+    # Add command to start in standalone mode with the properties file
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Waiting for Kafka to be ready..."
+        cub kafka-ready -b kafka:9092 1 60
+        echo "Waiting for Schema Registry to be ready..."
+        cub sr-ready schema-registry 8081 60
+        echo "Starting Kafka Connect worker..."
+        /etc/confluent/docker/run &
+        # Keep the container running
+        sleep infinity
+
+  # Add Kibana service
+  kibana:
+    build: ./kibana
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      XPACK_SECURITY_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q 'Looking good'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Added Schema Registry service
+  schema-registry:
+    build: ./schema-registry # Use the Dockerfile in the schema-registry directory
+    container_name: schema-registry
+    ports:
+      - "8085:8081" # Map host port 8085 to container port 8081 (default SR port)
+    depends_on:
+      kafka:
+        condition: service_healthy # Wait for Kafka to be healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
