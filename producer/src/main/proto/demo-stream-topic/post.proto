@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto"; // Import Timestamp
+
+package com.example.kafkaproducerdemo.model;
+
+option java_multiple_files = true;
+option java_package = "com.example.kafkaproducerdemo.model";
+option java_outer_classname = "PostProto";
+
+message Post {
+  string username = 1;
+  string content = 2;
+  string category = 3;
+  google.protobuf.Timestamp createdate = 4; // Added createdate field
+}

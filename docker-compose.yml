@@ -30,24 +30,32 @@ services:
     container_name: producer
     ports:
       - "8080:8080"
-    depends_on:
-      - kafka
+    #depends_on:
+    #  - kafka
+    #  - schema-registry # Added dependency
     environment:
       SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC: demo-topic
+      APP_KAFKA_STREAM_TOPIC: demo-stream-topic # This line is already present
+      SPRING_KAFKA_PRODUCER_SCHEMA_REGISTRY_URL: http://schema-registry:8081 # Ensure schema registry URL is passed
 
   consumer:
     build: ./consumer
     container_name: consumer
     ports:
-      - "8081:8080"
-    depends_on:
-       kafka:
-         condition: service_healthy
+      - "8081:8080" # Assuming consumer runs on 8080 internally
+    #depends_on:
+    #   kafka:
+    #     condition: service_healthy
+    #   schema-registry: # Added dependency
+    #     condition: service_healthy
     environment:
       SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC: demo-topic
+      APP_KAFKA_STREAM_TOPIC: demo-stream-topic # Added stream topic env var
       SPRING_KAFKA_CONSUMER_GROUP_ID: my-group
+      SPRING_KAFKA_CONSUMER_SCHEMA_REGISTRY_URL: http://schema-registry:8081 # Added schema registry URL
+      SPRING_KAFKA_STREAMS_APPLICATION_ID: post-stream-processor # Added Streams App ID
 
   # Added Elasticsearch service
   elasticsearch:

@@ -1,0 +1,10 @@
+# Compiled output directories
+/consumer/target/
+/producer/target/
+
+# Add other ignores as needed, e.g.:
+# .idea/
+# *.iml
+# .vscode/
+# *.log
+# .DS_Store

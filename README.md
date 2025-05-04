@@ -12,7 +12,6 @@ A consumer-producer Kafka demo project showcasing a microservice architecture.
 - **Search and Analytics**: Elasticsearch
 - **CI/CD**: GitHub Actions
 - **Containerization**: Docker
-- **Orchestration**: Kubernetes
 - **Container Composition**: docker-compose
 - **Monitoring and Visualization**:
   - Kibana
@@ -22,7 +21,7 @@ A consumer-producer Kafka demo project showcasing a microservice architecture.
 
 ## Overview
 
-This project demonstrates the implementation of a microservice architecture using modern technologies. It includes producer and consumer services communicating via Apache Kafka, with data serialization handled by Protocol Buffers. The project also integrates Elasticsearch for search and analytics, and employs Docker and Kubernetes for containerization and orchestration. Monitoring and visualization are supported through Kibana, Grafana, and Prometheus.
+This project demonstrates the implementation of a microservice architecture using modern technologies. It includes producer and consumer services communicating via Apache Kafka, with data serialization handled by Protocol Buffers. The project also integrates Elasticsearch for search and analytics, and employs Docker and Docker-compose for containerization and orchestration. Monitoring and visualization are supported through Kibana, Grafana, and Prometheus.
 
 ## Getting Started
 

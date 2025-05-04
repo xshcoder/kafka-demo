@@ -27,6 +27,7 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+            <!-- Version managed by Spring Boot parent -->
         </dependency>
 
         <!-- Added SpringDoc OpenAPI (Swagger UI) Dependency -->
@@ -91,6 +92,13 @@
                         </goals>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.google.protobuf</groupId>
+                        <artifactId>protobuf-java</artifactId>
+                        <version>${protobuf.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
          <!-- Added OS Detector Extension for protoc -->
