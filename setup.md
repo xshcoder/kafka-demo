@@ -8,6 +8,8 @@ don't run >mvn clean install as proto files shouldn't be cleaned before compile
 >producer/mvn install
 >docker-compose up --build -d
 >docker-compose down
+>docker-compose build kafka
+>docker-compose up -d --force-recreate kafka
 
 ## URLs
 -producer http://localhost:8080
@@ -18,11 +20,15 @@ don't run >mvn clean install as proto files shouldn't be cleaned before compile
 -elasticsearch http://localhost:9200
 -kibana http://localhost:5601
 -kafka schema registry http://localhost:8085
+-prometheus http://localhost:9090
+-grafana http://localhost:3000
 
 ## reload project to recognize generated protocol buffers java source files
 Ctrl + Shift + P select Java:Reload Project
 
 ## upload proto schema to schema registry
+http://localhost:8085/subjects
+
 curl -X POST http://localhost:8085/subjects/demo-topic-value/versions \
   -H "Content-Type: application/json" \
   -d '{
@@ -82,6 +88,16 @@ curl -X POST -H "Content-Type: application/json" --data '{
   }
 }'
 
-http://localhost:8083/connectors
-
 >./upload-connector-configuration.sh
+## prometheus
+consumer
+http://localhost:8080/actuator/prometheus
+
+producer
+http://localhost:8081/actuator/prometheus
+
+kafka
+http://localhost:7071/matrics
+
+## grafana network
+docker inspect kafka | findstr NetworkMode

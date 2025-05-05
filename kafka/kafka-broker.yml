@@ -1,0 +1,217 @@
+# This is a configuration file for the JMX Exporter agent to collect Kafka broker metrics.
+# It defines rules to match JMX MBeans and attributes and expose them as Prometheus metrics.
+
+# The host and port where the exporter agent will listen (usually defined in KAFKA_OPTS)
+# listenAddress: 0.0.0.0
+# listenPort: 7071
+
+# Rules for selecting and naming JMX metrics
+rules:
+  # Generic Kafka metrics
+  - pattern: kafka.common<type=(KafkaRequestHandlerPool|KafkaPrincipalBuilder|KafkaScheduler|KafkaTimer), name=(.+)><>RequestsPerSec
+    name: kafka_$1_requests_total
+    labels:
+      name: $2
+    help: Kafka $1 $2 requests per second.
+    type: COUNTER
+
+  - pattern: kafka.common<type=(KafkaRequestHandlerPool|KafkaPrincipalBuilder|KafkaScheduler|KafkaTimer), name=(.+)><>RequestBlockedPercent
+    name: kafka_$1_request_blocked_percent
+    labels:
+      name: $2
+    help: Kafka $1 $2 request blocked percent.
+    type: GAUGE
+
+  - pattern: kafka.common<type=(KafkaRequestHandlerPool|KafkaPrincipalBuilder|KafkaScheduler|KafkaTimer), name=(.+)><>RequestBlockedTimeMs
+    name: kafka_$1_request_blocked_time_ms
+    labels:
+      name: $2
+    help: Kafka $1 $2 request blocked time in milliseconds.
+    type: GAUGE
+
+  - pattern: kafka.common<type=(KafkaRequestHandlerPool|KafkaPrincipalBuilder|KafkaScheduler|KafkaTimer), name=(.+)><>RequestQueueSize
+    name: kafka_$1_request_queue_size
+    labels:
+      name: $2
+    help: Kafka $1 $2 request queue size.
+    type: GAUGE
+
+  # Broker metrics
+  - pattern: kafka.server<type=(KafkaServer), name=(.+)><>Value
+    name: kafka_server_$2
+    labels:
+      name: $2
+    help: Kafka server metric $2.
+    type: GAUGE # Corrected from GGE
+
+  - pattern: kafka.server<type=(BrokerTopicMetrics), name=(.+), topic=(.+), partition=(.+)><>(Count|MeanRate|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)
+    name: kafka_broker_topic_partition_$2_$5
+    labels:
+      name: $2
+      topic: $3
+      partition: $4
+    help: Kafka broker topic partition metric $2.
+    type: GAUGE # Use GAUGE for rates, COUNTER for Count
+
+  - pattern: kafka.server<type=(BrokerTopicMetrics), name=(.+), topic=(.+)><>(Count|MeanRate|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)
+    name: kafka_broker_topic_$2_$4
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka broker topic metric $2.
+    type: GAUGE # Use GAUGE for rates, COUNTER for Count
+
+  - pattern: kafka.server<type=(BrokerTopicMetrics), name=(.+), topic=(.+)><>Count
+    name: kafka_broker_topic_$2_total
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka broker topic metric $2.
+    type: COUNTER # Use COUNTER for Count
+
+  - pattern: kafka.server<type=(ReplicaManager), name=(.+)><>Value
+    name: kafka_replica_manager_$2
+    labels:
+      name: $2
+    help: Kafka replica manager metric $2.
+    type: GAUGE
+
+  - pattern: kafka.server<type=(DelayedOperations), name=(.+)><>Value
+    name: kafka_delayed_operations_$2
+    labels:
+      name: $2
+    help: Kafka delayed operations metric $2.
+    type: GAUGE
+
+  - pattern: kafka.server<type=(FetcherLagMetrics), clientId=(.+), replicaId=(.+), topic=(.+), partition=(.+)><>Value
+    name: kafka_fetcher_lag_$2_$3_$4
+    labels:
+      clientId: $1
+      replicaId: $2
+      topic: $3
+      partition: $4
+    help: Kafka fetcher lag metric.
+    type: GAUGE
+
+  - pattern: kafka.network<type=(RequestMetrics), name=(.+), request=(.+)><>(Count|MeanRate|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)
+    name: kafka_request_$2_$4
+    labels:
+      name: $2
+      request: $3
+    help: Kafka request metric $2.
+    type: GAUGE # Use GAUGE for rates, COUNTER for Count
+
+  - pattern: kafka.network<type=(RequestMetrics), name=(.+), request=(.+)><>Count
+    name: kafka_request_$2_total
+    labels:
+      name: $2
+      request: $3
+    help: Kafka request metric $2.
+    type: COUNTER # Use COUNTER for Count
+
+  - pattern: kafka.network<type=(SocketServer), name=(.+)><>Value
+    name: kafka_socket_server_$2
+    labels:
+      name: $2
+    help: Kafka socket server metric $2.
+    type: GAUGE
+
+  # Controller metrics
+  - pattern: kafka.controller<type=(KafkaController), name=(.+)><>Value
+    name: kafka_controller_$2
+    labels:
+      name: $2
+    help: Kafka controller metric $2.
+    type: GAUGE
+
+  # ZooKeeper client metrics
+  - pattern: kafka.server<type=(SessionExpireListener), name=(.+)><>Value
+    name: kafka_zookeeper_session_expire_listener_$2
+    labels:
+      name: $2
+    help: Kafka ZooKeeper session expire listener metric $2.
+    type: GAUGE
+
+  # Network metrics
+  - pattern: kafka.network<type=(Processor), name=(.+)><>Value
+    name: kafka_network_processor_$2
+    labels:
+      name: $2
+    help: Kafka network processor metric $2.
+    type: GAUGE
+
+  # Produce and Fetch metrics
+  - pattern: kafka.server<type=(Produce), name=(.+), topic=(.+)><>(Count|MeanRate|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)
+    name: kafka_server_produce_$2_$4
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka server produce metric $2.
+    type: GAUGE # Use GAUGE for rates, COUNTER for Count
+
+  - pattern: kafka.server<type=(Produce), name=(.+), topic=(.+)><>Count
+    name: kafka_server_produce_$2_total
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka server produce metric $2.
+    type: COUNTER # Use COUNTER for Count
+
+  - pattern: kafka.server<type=(Fetch), name=(.+), topic=(.+)><>(Count|MeanRate|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)
+    name: kafka_server_fetch_$2_$4
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka server fetch metric $2.
+    type: GAUGE # Use GAUGE for rates, COUNTER for Count
+
+  - pattern: kafka.server<type=(Fetch), name=(.+), topic=(.+)><>Count
+    name: kafka_server_fetch_$2_total
+    labels:
+      name: $2
+      topic: $3
+    help: Kafka server fetch metric $2.
+    type: COUNTER # Use COUNTER for Count
+
+  # Request timing metrics (Histograms)
+  - pattern: kafka.network<type=(RequestMetrics), name=(.+), request=(.+)><>(TotalTimeMs|RequestQueueTimeMs|ResponseQueueTimeMs|LocalTimeMs|RemoteTimeMs|ThrottleTimeMs)
+    name: kafka_request_$2_$4
+    labels:
+      name: $2
+      request: $3
+    help: Kafka request metric $2.
+    type: GAUGE # These are typically histograms or timers, but expose as GAUGE for simplicity
+
+  - pattern: kafka.network<type=(RequestMetrics), name=(.+), request=(.+)><>(50thPercentile|75thPercentile|95thPercentile|98thPercentile|99thPercentile|999thPercentile)
+    name: kafka_request_$2_$4_ms
+    labels:
+      name: $2
+      request: $3
+    help: Kafka request metric $2 percentile.
+    type: GAUGE
+
+  # Log metrics
+  - pattern: kafka.log<type=(Log), name=(.+), topic=(.+), partition=(.+)><>Value
+    name: kafka_log_$2
+    labels:
+      name: $2
+      topic: $3
+      partition: $4
+    help: Kafka log metric $2.
+    type: GAUGE
+
+  # JVM metrics (collected by default by the agent, but can be filtered here if needed)
+  # - pattern: java.lang<type=GarbageCollector, name=(.+),.><>CollectionCount
+  #   name: jvm_gc_collection_seconds_count
+  #   labels:
+  #     gc: "$1"
+  #   help: "Total number of garbage collections that have occurred."
+  #   type: COUNTER
+  # - pattern: java.lang<type=GarbageCollector, name=(.+),.><>CollectionTime
+  #   name: jvm_gc_collection_seconds_sum
+  #   labels:
+  #     gc: "$1"
+  #   help: "Total time spent in garbage collection."
+  #   type: COUNTER # Corrected from COUNGE
+
+  # Add more rules here for other specific MBeans if needed
